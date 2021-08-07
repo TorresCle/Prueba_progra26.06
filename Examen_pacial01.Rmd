@@ -1,0 +1,318 @@
+---
+title: "EXAMEN_PARCIAL"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## PRIMERA PARTE
+
+1.1 Se tiene una variable x (no necesariamente temperatura) que depende de la elevaci´on. Se sabe que entre
+los 1000 y 3000 metros, esta variable se ve reducido en 2 unidades cada 500 metros. Entre los 3000 y 4000
+metros, var´ıa en 0.5 unidades, y a una altitud mayor, su valor es constante. Cree una funci´on que permita
+obtener el valor de esta variable, ´unicamente con el dato de la elevaci´on. [2pts]
+
+El valor de la variable x a 1000 metros es de 81.4 unidades
+
+
+```{r cars}
+variable <- function(altitud, x = 85.4) {
+  if (altitud >= 1000 & altitud < 3000) {
+    p = x  - 2*(altitud %/% 500)
+  } else if (altitud >= 3000 & altitud < 4000) {
+    p = x - 0.5 * (altitud %/% 500)
+  } else if (altitud >= 4000) {
+    p = x
+  } else {
+    print("valor no considerado")
+  }
+
+  return(p)
+}
+
+variable(1000)
+```
+
+1.2 Resolver el siguiente sistema de ecuaciones
+
+```{r warning=TRUE}
+A <- c(3, 2, 1, 2, -1, 4, -2, 3, 2)
+B <- c(0, 9, -4)
+
+ecuacion1 <- matrix(A, ncol = 3)
+ecuacion2 <- matrix(B, ncol = 1)
+
+solve(ecuacion1, ecuacion2)
+```
+
+## SEGUNDA PARTE
+1 A partir del siguiente **conjunto de datos**, se describen las variables:
+
+uh name → Nombre de cuenca
+
+bh esc → Escenario (observado y modelos climáticos)
+
+bh month → Meses
+
+bh pc → Precipitación
+
+bh er → Evapotranspiración Real
+
+bh rh → Rendimiento Hídrico
+
+bh qd → Caudal
+Se solicita lo siguiente:
+
+A: Calcular la precipitaci´on acumulada anual (Valores observados) para la cuenca asignada
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(readr)
+
+datos <- read_csv("mods_clima_uh.csv")
+
+datos <- datos %>% 
+  filter(
+    uh_name == "Cuenca Tumbes"
+  ) %>% 
+  select(
+    bh_month, everything()
+  ) %>%
+  mutate(bh_month = sprintf("%1$02d", bh_month))
+datos
+  
+(observado <- datos %>%
+  group_by(bh_esc) %>% 
+  summarise(
+    bh_pc = sum(bh_pc, na.rm = T)
+  ) %>% 
+  filter(
+    bh_esc == "Observado"
+  ))
+  
+```
+B: Calcular el porcentaje de sesgo (%, PBIAS) de los escenarios clim´aticos (ACCESS, HADGEM2, MPI)
+respecto a los datos observados para cada mes (enero - diciembre) de cada variable, para la cuenca
+asignada.
+```{r message=FALSE, warning=FALSE}
+models <- c("ACCESS 1.0", "HadGEM2-ES", "MPI-ESM-LR", "Observado")
+model <- data.frame(month.abb)
+
+for (i in 1:4) {
+  valor = datos %>% 
+    filter(bh_esc == models[i]) %>% 
+    select(bh_pc)
+  model = cbind(model, valor)
+}
+colnames(model) <- c("meses", "ACCESS 1.0", "HadGEM2-ES", "MPI-ESM-LR", "Observado")
+model
+```
+Ahora se va a realizar el sesgo (MODELO-OBS)/OBS*100 para cada modelo 
+```{r warning=TRUE}
+sesgo <- model %>% 
+  mutate(
+    SESGO_ACCESS = (abs(`ACCESS 1.0` - Observado)/Observado)*100,
+    SESGO_HADGEM2 = (abs(`HadGEM2-ES` - Observado)/Observado)*100,
+    SESGO_MPI = (abs(`MPI-ESM-LR` - Observado)/Observado)*100
+  )
+sesgo
+```
+C: De la pregunta anterior, ¿Cu´al es el escenario clim´atico m´as preciso? Fundamente su respuesta
+```{r warning=TRUE}
+sesgo1 <- sesgo %>% 
+  summarise(
+    SESGO_ACCESS = mean(SESGO_ACCESS, na.rm = T),
+    SESGO_HADGEM2 = mean(SESGO_HADGEM2, na.rm = T),
+    SESGO_MPI = mean(SESGO_MPI, na.rm = T)
+  )
+sesgo1
+
+```
+Comentario: Como se puede observar, el modelo MPI-ESM-LR tiene un menor promedio por tanto, es el modelo con más precision.
+
+
+D: Graficar, con ggplot2, la precipitaci´on (enero a diciembre) observada y modelos clim´aticos.
+```{r warning=TRUE}
+library(ggplot2)
+ggplot(datos) +
+  geom_bar(mapping = aes(x = bh_month, y = bh_pc), stat = "identity") +
+  facet_wrap(~bh_esc) +
+  scale_x_discrete(labels = month.abb) +
+  labs( x = "Meses", y = "Precipitación mm")
+  labs(x = "Meses", y = "Precipitación") 
+  
+```
+
+## TERCERA PARTE
+1: Se tiene el conjunto de datos de temperatura diaria (per´ıodo 1928 - 2015) de ciertas estaciones meteorolÓgicas (temperatureDataset.csv), donde cada una de estas est´an asociadas a un c´odigo ´unico (p.e.
+qc00000208). Si existen valores iguales a -99.9, considerarlos como missing values y convertirlos a NA.
+
+
+```{r warning=TRUE}
+Data03 <- read_csv("temperatureDataset.csv")
+
+Data_temp <- Data03 %>% 
+  select(DATE, all_of("qc00000746")) %>% 
+  rename(
+    Temp = qc00000746
+  ) %>%
+   mutate(
+    DATE = as.Date(DATE, format("%d/%m/%Y")),
+    Temp = ifelse(Temp == -99.9, NA, Temp)
+  ) %>% 
+  arrange()
+Data_temp
+
+```
+
+* Evaluamos si la data está completa:
+
+```{r warning=TRUE}
+tail(Data_temp)
+seq(as.Date("1928-11-02"), as.Date("2015-10-31"), by = "day") %>% length()
+
+```
+COMENTARIO: Como se puede observar la data es completa con ello ahora si podemos empezar a manipular 
+
+
+A: Determine la cantidad de missing values para los a˜nos hidrol´ogicos Sep1983-Agos1984 y Sep1997-
+Agos1998.
+
+```{r warning=TRUE}
+funcion_temp <- function(m, n){
+  
+  Data_temp %>% filter(
+    DATE >= m & DATE <= n
+  ) %>% 
+  mutate(
+    cantidad_NAs = sum(is.na(Temp))
+  ) %>% 
+  summarise(
+    cantidad_NAs = unique(cantidad_NAs)
+  )
+}
+funcion_temp("1983-09-01", "1984-08-31")
+funcion_temp("1997-09-01", "1998-08-31")
+
+```
+
+B:  Calcule la serie de tiempo de temperatura mensual (si el de d´ıas con missing values, en un mes, supera
+el 5%, la temperatura mensual ser´a considerado como un NA). Adem´as, identifique, visualmente,
+posibles valores at´ıpicos y describa una posible causa
+
+
+```{r warning=TRUE}
+library(stringr)
+Tem_mensual <- Data_temp %>% 
+  group_by(DATE = str_sub(DATE, 1, 7)) %>% 
+  mutate(
+    valores_NAs = sum(is.na(Temp))*100/ n()
+  ) %>% 
+  summarise(
+    Temp = mean(Temp, na.rm = T),
+    valores_NAs = unique(valores_NAs)
+  ) %>% 
+  mutate(
+    Temp = ifelse(valores_NAs > 5, NA, Temp),
+    DATE = as.Date(sprintf("%1$s-01", DATE))
+  )
+Tem_mensual
+
+```
+Comentario : Ahora para poder identificar de una mejor manera podemos graficarlo como se muestra a continuación
+
+
+```{r warning=TRUE}
+ggplot(Tem_mensual, aes(DATE, Temp)) +
+  geom_line(color = "blue" )
+```
+
+C: Determine la cantidad de missing values de la serie de tiempo a paso mensual para los a˜nos 2005 y
+2010
+
+```{r warning=TRUE}
+
+mensual_NA <- Tem_mensual %>%
+  filter(DATE >= "2005-01-01" & DATE <= "2010-12-31") %>% 
+  mutate(
+    valores_NAs = sum(is.na(Temp)),
+  ) %>% 
+  summarise(
+    valores_NAs = unique(valores_NAs)
+  )
+
+mensual_NA
+
+```
+
+
+D: Cree una funci´on que calcule, a partir de los datos de temperatura mensual, la climatolog´ıa (Ene-Dic).
+Obtener la climatolog´ıa para los per´ıodos 1980-1995 y 1996-2010. Plotear sus resultados en una sola
+g´rafica para describir sus diferencias y/o similitudes (entre climatolog´ıas).
+
+
+```{r warning=TRUE}
+funcion02 <- function(p, q){
+  Tem_mensual %>%
+  filter(DATE >= p & DATE <= q) %>% 
+  group_by(
+    DATE = str_sub(DATE, 6, 7)
+  ) %>% 
+  summarise(
+    Temp = mean(Temp, na.rm = T)
+  ) %>% 
+  mutate(
+    periodo = sprintf("periodo %1$s-%2$s",
+                      p = str_sub(p, 1, 4),
+                      q = str_sub(q, 1, 4))
+  )
+}
+Periodo01 <- funcion02("1980-01-01","1995-12-01")
+Periodo02 <- funcion02("1996-01-01","2010-12-01")
+
+grafico <- rbind(Periodo01, Periodo02)
+
+       
+```
+Comentario: como ya tenemos todo listo ahora lo podemos plotear
+
+```{r warning=TRUE}
+ggplot(grafico, aes(DATE, Temp)) +
+  geom_point(color ="blue") +
+  facet_wrap(~periodo) +
+  labs(x = "Meses", y = "Temperatura °C") +
+  scale_x_discrete(
+    labels = month.abb
+  )
+
+```
+E: Plotear (boxplot) la variabilidad de los valores mensuales (Ene-Dic) para el per´ıodo 1980-2013 y
+describirlo correctamente
+
+
+```{r warning=TRUE}
+box_plot <- Data_temp %>%
+  filter(
+    DATE >= "1980-01-01" & DATE <= " 2013-12-31"
+  ) %>% 
+  group_by(
+    DATE = str_sub(DATE, 6, 7)
+  )
+```
+Comentario: COn lo anterior ya tenemos listo, con ello ya podemos plotearlo un boxplot
+
+
+```{r warning=TRUE}
+ggplot(box_plot)+
+  geom_boxplot(mapping = aes(x = DATE, y = Temp), fill = rainbow(12)) +
+  labs(x = "Meses", y = "Temperatura °C") +
+  scale_x_discrete(labels = month.abb) 
+  
+```
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

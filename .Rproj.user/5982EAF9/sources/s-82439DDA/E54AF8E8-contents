@@ -1,0 +1,12 @@
+#practicando
+library(dslabs)
+data(murders)
+
+murders<- tibble(murders)
+selec <- murders %>% 
+  select(abb, population) %>% head()
+
+diferente <- murders %>% 
+  filter(
+    region != "South"
+  )

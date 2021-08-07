@@ -1,0 +1,81 @@
+---
+title: "EXAMEN_PARCIAL"
+output: html_document
+---
+
+
+Examen Parcial - PARTE N°1
+================
+Grupo N° 6 - GeoCódigo
+---------------
+FECHA: 05-08-2021
+
+# PARTE 01 - Usar R nativo (no librerías)
+
+**1. Se tiene una variable x (no necesariamente temperatura) que depende de la elevacion.Se sabe que entre los 1000 y 3000 metros, esta variable se ve reducido en 2 unidades cada 500 metros.Entre los 3000 y 4000 metros varía en 0.5 unidades, y a una altitud mayor, su valor es constante. Cree una función que permita obtener el valor de esta variable, únicamente con el dato de la elevación.**
+
+**-   El valor de la variable x a 1000 metros es de 81.4 unidades.**
+
+```{r}
+variable <- function(h, x = 85.4) {
+  if (h >= 1000 & h < 3000) {
+    p <- x  - 2*(h %/% 500)
+  } else if (h >= 3000 & h < 4000) {
+    p <- x - 0.5 * (h %/% 500)
+  } else if (h >= 4000) {
+    p <- x
+  } else {
+    print("valor no considerado")
+  }
+
+  return(p)
+}
+variable(1000)
+```
+
+
+&nbsp;
+
+**2.  Resolver el siguiente SISTEMA DE ECUACIONES.**
+
+$$
+3a + 2b - 2c = 0 \\\\
+2a - 1b + 3c = 9 \\\\
+a + 4b + 2c = -4 
+$$
+
+```{r}
+    mat01 <- matrix(c(3, 2, -2, 2, -1, 3, 1, 4, 2), nrow = 3, ncol = 3, byrow = T)
+    mat02 <- matrix(c(0, 9, -4), nrow = 3, ncol = 1)
+
+    solve(mat01, mat02)
+
+```
+
+&nbsp;
+
+# PARTE N° 02 Y 03 - Usando librerias
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(leaflet, maps, tidyverse)
+
+leaflet()%>%addTiles()%>%
+  addMarkers(
+    lng = -80.28,
+    lat = -3.45,
+    popup = paste(sep = "<br/>",
+                  "<b>ESTACIÓN TUMBES</b>",
+                  "Departamento: Tumbes",
+                  "Código: qc00000247",
+                  "Antitud: 24",
+                  "<a href='https://jose-luis15.github.io/PROYECTOS--PROGRA-II/RECURSOS/acceso1.html'>Solución</a>"))%>%
+  addMarkers(
+    lng = -73.36,
+    lat = -15.78,
+    popup = paste(sep = "<br/>",
+                  "<b>ESTACIÓN CARAVELI</b>",
+                  "Departamento: Arequipa",
+                  "Código: qc00000746",
+                  "Antitud: 1755",
+                  "<a href='https://jose-luis15.github.io/PROYECTOS--PROGRA-II/RECURSOS/acceso2.html'>Solución</a>"))
+```

@@ -1,0 +1,235 @@
+###############################################################################
+###############################################################################
+#PREGUNTA 01
+#1.1
+funcion <- function(altitud){
+  parametro = 81.4
+  if (altitud >=1000 & altitud <= 3000){
+    resultado = parametro - 2*(altitud - 1000)/500
+    
+  } else if (altitud > 3000 & altitud <= 4000){
+    resultado = parametro - 0.5 * (altitud - 3000)/500
+    
+  } else {
+    resultado = parametro
+  }
+  resultado
+}
+funcion(1000)
+
+
+#1.2
+A <- c(3, 2, 1, 2, -1, 4, -2, 3, 2)
+B <- c(0, 9, -4)
+
+ecuacion1 <- matrix(A, ncol = 3)
+ecuacion2 <- matrix(B, ncol = 1)
+
+solve(ecuacion1, ecuacion2)
+
+################################################################################
+################################################################################
+
+library(dplyr)
+
+datos <- read.csv("mods_clima_uh.csv")
+ head(datos)
+
+#2.a 
+OBSERVADO <- dplyr::tibble(datos) %>% 
+  dplyr::select(uh_name, bh_month, bh_pc, bh_esc) %>% 
+  dplyr::filter(uh_name == "Cuenca Tumbes", bh_esc == "Observado") %>% 
+  dplyr::summarise(
+    pp = sum(bh_pc, na.rm = T)
+    )
+################################################################################
+#2.b
+
+ACCESS <- dplyr::tibble(datos) %>% 
+  dplyr::select(uh_name, bh_month, bh_pc, bh_esc) %>% 
+  dplyr::filter(uh_name == "Cuenca Tumbes", bh_esc == "ACCESS 1.0") %>% 
+  dplyr::summarise(
+    pp_ACCESS = sum(bh_pc, na.rm = T)
+    )
+
+HADGEM2 <- dplyr::tibble(datos) %>% 
+  dplyr::select(uh_name, bh_month, bh_pc, bh_esc) %>% 
+  dplyr::filter(uh_name == "Cuenca Tumbes", bh_esc == "HadGEM2-ES") %>% 
+  dplyr::summarise(
+    pp_HADGEM2 = sum(bh_pc, na.rm = T)
+  )
+
+MPI <- dplyr::tibble(datos) %>% 
+  dplyr::select(uh_name, bh_month, bh_pc, bh_esc) %>% 
+  dplyr::filter(uh_name == "Cuenca Tumbes", bh_esc == "MPI-ESM-LR") %>%
+  dplyr::summarise(
+    pp_MPI = sum(bh_pc)
+  )
+  
+#HALLANDO LOS PORCENTAJES DE SESGO (%PBIAS) ---> ((MODELO - OBSERVADO)/OBSERVADO)*100
+
+SESGO_ACCESS <- ((ACCESS - OBSERVADO)/OBSERVADO)*100
+SESGO_HADGEM2 <- ((HADGEM2 - OBSERVADO)/OBSERVADO)*100
+SESGO_MPI <- ((MPI - OBSERVADO)/OBSERVADO)*100
+
+install.packages("hydroGOF")
+library(hydroGOF)
+
+SESGO_ACCESS_1 <- pbias(ACCESS, OBSERVADO, na.rm = T)
+SESGO_HADGEM2_1 <- pbias(HADGEM2, OBSERVADO, na.rm = T)
+SESGO_MPI_1 <- pbias(MPI, OBSERVADO, na.rm = T)
+
+#3.c
+# AL MOMENTO DE EVALUAR ANTERIORMENTE PODEMOS OBSERVAR QUE EL MODLEO MAS PRECISO ES MPI
+
+#3.d
+library(ggplot2)
+
+OBSERVADO_1 <- dplyr::tibble(datos) %>% 
+  dplyr::filter(uh_name == "Cuenca Tumbes", bh_esc == "Observado") %>%
+  dplyr::mutate(pp_OBSERVADO = bh_pc, nom_OBSERVADO = bh_esc) %>% 
+  dplyr::select(bh_month, pp_OBSERVADO, nom_OBSERVADO)
+
+ACCESS_1 <- dplyr::tibble(datos) %>% 
+  dplyr::filter(uh_name == "Cuenca Tumbes", bh_esc == "ACCESS 1.0") %>% 
+  dplyr::mutate(pp_access = bh_pc, nom_access = bh_esc) %>% 
+  dplyr::select(pp_access, nom_access)
+
+HADGEM2_1 <- dplyr::tibble(datos) %>%
+  dplyr::filter(uh_name == "Cuenca Tumbes", bh_esc == "HadGEM2-ES") %>%
+  dplyr::mutate(pp_HADGEM2 = bh_pc, nom_HADGEM2 = bh_esc) %>%
+  dplyr::select(pp_HADGEM2, nom_HADGEM2) 
+
+MPI_1 <- dplyr::tibble(datos) %>% 
+  dplyr::filter(uh_name == "Cuenca Tumbes", bh_esc == "MPI-ESM-LR") %>%
+  dplyr::mutate(pp_MPI = bh_pc, nom_MPI = bh_esc) %>%
+  dplyr::select(pp_MPI, nom_MPI)
+ 
+
+
+
+conjunto_datos <- dplyr::tibble(OBSERVADO_1, ACCESS_1, HADGEM2_1, MPI_1)
+
+names(conjunto_datos)
+
+ggplot(data = conjunto_datos) +
+  geom_point(mapping = aes(x = bh_month, y = pp_OBSERVADO), color = "blue")
+
+ggplot(data = conjunto_datos) +
+  geom_point(mapping = aes(x = bh_month, y = pp_access), color = "orange")
+
+ggplot(data = conjunto_datos) +
+  geom_point(mapping = aes(x = bh_month, y = pp_HADGEM2), color = "green")
+
+ggplot(data = conjunto_datos) +
+  geom_point(mapping = aes(x = bh_month, y = pp_MPI), color = "red")
+
+#################################################################################
+#################################################################################
+#PARTE 03
+
+Data_parte3 <- read_csv("temperatureDataset.csv")
+
+Data_temp <- Data_parte3 %>% 
+  dplyr::select(DATE, qc00000441) %>%
+  dplyr::mutate(
+    DATE = as.Date(DATE, format = "%d/%m/%Y")) %>% 
+  dplyr::rename(Temp = qc00000441) %>% 
+  dplyr::arrange()
+
+#Comprobando el numero de datos
+seq(as.Date("1928-11-02"), as.Date("2015-10-31"), by = "day") %>% length()
+tail(Data_temp)
+#Es correcto el numero de datos
+
+#convertimos los -99.9 a NA
+Data_temp <- Data_temp %>% 
+  dplyr::mutate(
+    Temp = ifelse(Temp == -99.9, NA, Temp)
+  )
+
+#Cantidad de NA a paso diario para todos los a?os
+NA_diario <- Data_temp %>% 
+  dplyr::mutate(
+    cantidad_NA = sum(is.na(Temp))
+  ) %>% 
+  dplyr::summarise(
+    cantidad_NA = unique(cantidad_NA)
+  )
+
+#Determinamos la cantidad de missing values para sep1983-Agos1984
+Sep_Agos <- Data_temp %>% 
+  dplyr::filter(DATE>="1983-09-01" & DATE <="1984-08-31") %>% 
+  dplyr::mutate(
+    cantidad_NA01 = sum(is.na(Temp))
+  ) %>% 
+  dplyr::summarise(
+    cantidad_NA01 = unique(cantidad_NA01)
+  )
+
+#Determinamos la cantidad de missing values para sep1997-Agos1998
+Sep_Agos01 <- Data_temp %>% 
+  dplyr::filter(
+    DATE>="1997-09-01" & DATE <="1998-08-31"
+  ) %>% 
+  dplyr::mutate(
+    cantidad_NA02 = sum(is.na(Temp))
+  ) %>% 
+  dplyr::summarise(
+    cantidad_NA02 = unique(cantidad_NA02)
+  )
+
+#PASO DE TIEMPO A PASO MENSUAL
+
+Tem_mensual <- Data_temp %>% 
+  group_by(
+    DATE = str_sub(DATE, 1, 7)
+  ) %>% 
+  dplyr::mutate(
+    valores_NA03 = sum(is.na(Temp))*100/n()
+  ) %>% 
+  dplyr::summarise(
+    Temp = mean(Temp, na.rm = T),
+    valores_NA03 = unique(valores_NA03)
+  ) %>% 
+  dplyr::mutate(
+    Temp = ifelse(valores_NA03 >= 5, NA, Temp),
+    DATE = as.Date(sprintf("%1$s-01", DATE)),
+    meses = str_sub(DATE, 6, 7)
+  )
+
+ggplot(Tem_mensual, aes(DATE, Temp)) +
+  geom_point(color = "blue")
+
+
+#Determinamos la cantidad de missing values mensuales
+mensual_NA <- Tem_mensual %>%
+  dplyr::filter(
+    DATE >= "2005-01-01" & DATE <="2010-12-01"
+  ) %>% 
+  dplyr::mutate(
+    valores_NA04 = sum(is.na(Temp))
+  ) %>% 
+  dplyr::summarise(
+    valores_NA04 = unique(valores_NA04)
+  )
+
+#ploteamos la Variabilidad de los valores mensuales para el periodo 1980 a 2013
+variabilidad <- Tem_mensual %>% 
+  dplyr::filter(
+    DATE >="1980-01-01" & DATE <= "2013-12-01"
+  )
+
+ggplot(variabilidad, aes(meses, Temp)) +
+  geom_boxplot() +
+  theme_bw() +
+  scale_x_discrete(
+    labels = month.abb
+  )
+
+
+
+
+
+view(Tem_mensual)
+Data_temp$Temp %>% table()
